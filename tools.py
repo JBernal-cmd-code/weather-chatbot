@@ -15,27 +15,49 @@ BASE_URL = "https://api.openweathermap.org/data/2.5"
 TIMEOUT = 10  # seconds
 
 
+US_STATES = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN",
+    "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV",
+    "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN",
+    "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC",
+}
+
+
 def _clean_city(city: str) -> str:
-    """Basic input cleanup so only a short place name reaches the API."""
+    """Basic input cleanup so only a short place name reaches the API.
+
+    Also converts "Dallas, TX" into "Dallas,TX,US", the format OpenWeather
+    needs for US states.
+    """
     city = (city or "").strip()
     if not city or len(city) > 80:
         raise ValueError("Please provide a valid city name.")
-    return city
+    parts = [p.strip() for p in city.split(",") if p.strip()]
+    if len(parts) == 2 and parts[1].upper() in US_STATES:
+        parts = [parts[0], parts[1].upper(), "US"]
+    return ",".join(parts)
 
 
 def _get(endpoint: str, city: str) -> dict:
-    """Call an OpenWeather endpoint and return the JSON response."""
+    """Call an OpenWeather endpoint and return the JSON response.
+
+    If "City,Something" isn't found, it retries with just the city name.
+    """
     if not OPENWEATHER_API_KEY:
         raise RuntimeError("OPENWEATHER_API_KEY is missing from .env")
-    resp = requests.get(
-        f"{BASE_URL}/{endpoint}",
-        params={"q": city, "appid": OPENWEATHER_API_KEY, "units": "imperial"},
-        timeout=TIMEOUT,
-    )
-    if resp.status_code == 404:
-        raise ValueError(f"City '{city}' was not found.")
-    resp.raise_for_status()
-    return resp.json()
+    attempts = [city]
+    if "," in city:
+        attempts.append(city.split(",")[0])
+    for q in attempts:
+        resp = requests.get(
+            f"{BASE_URL}/{endpoint}",
+            params={"q": q, "appid": OPENWEATHER_API_KEY, "units": "imperial"},
+            timeout=TIMEOUT,
+        )
+        if resp.status_code != 404:
+            resp.raise_for_status()
+            return resp.json()
+    raise ValueError(f"City '{city}' was not found.")
 
 
 @tool
