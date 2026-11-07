@@ -162,11 +162,7 @@ if prompt:
             reply = reason                                   # blocked: LLM never called
         else:
             with st.spinner("Checking the weather..."):
-                history = [
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages[:-1]
-                ]
-                result = ask_weather_bot(prompt, history)    # 3. agent (+ output filter)
+                result = ask_weather_bot(prompt)             # 3. agent (+ output filter)
             reply, weather = result["reply"], result["weather"]
 
             if REFUSAL_MESSAGE in reply:

@@ -65,6 +65,8 @@ When you send a message, it goes through these steps:
 5. The data gets sent back to grok and it writes the answer.
 6. This loop can only go 3 rounds max. Then the answer goes through the output filter and shows up in the chat with the weather data underneath it.
 
+The sidebar shows how many requests have been used, how many were blocked, and a security log that lists each blocked message and why it was blocked.
+
 ## Security
 
 Since the app uses a shared paid API key, I had to make sure people can't trick the bot or use it as a free grok for other stuff.
@@ -79,7 +81,8 @@ Since the app uses a shared paid API key, I had to make sure people can't trick 
 
 - **Only weather tools:** grok can only call the two weather tools. If it tries to call anything else, the code rejects it.
 - **Loop limit:** The tool calling loop stops after 3 rounds and only allows 2 tool calls per round so it can't get stuck in a loop and burn credits.
-- **Size limits:** Messages are limited to 300 characters and replies are capped at 500 tokens, so it can't be used to write essays or code. Only the last 6 chat messages are sent as history.
+- **Size limits:** Messages are limited to 300 characters and replies are capped at 500 tokens, so it can't be used to write essays or code. Each question is sent to grok on its own with no chat history, so earlier messages can’t be used to set up an injection and it can’t copy old answers.
+- **No made-up weather:** If grok answers without calling a tool, the code sends it back and makes it use the tool, so every answer comes from real OpenWeather data.
 - **Rate limit:** Each session can only send 5 messages a minute and 30 total.
 - **Keys in .env:** Both keys are stored in `.env` and loaded with `python-dotenv` using `os.getenv()`. Nothing is hardcoded. I added `.env` to `.gitignore` before my first commit and checked `git status` before each commit to make sure it never got pushed.
 
